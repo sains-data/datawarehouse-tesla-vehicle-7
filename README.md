@@ -82,7 +82,7 @@ Model ini menggunakan **Star Schema** di mana satu tabel fakta terhubung ke bebe
 ## 📁 Sumber Data
 
 Dataset: **Tesla Vehicle Deliveries Dataset (2012–2024)**  
-📎 [Link Kaggle](https://www.kaggle.com/datasets/khushikyad001/tesla-vehicle-deliveries-dataset-20122024/data)
+📎 [Link Drive](https://drive.google.com/file/d/1V_R6I0yWk8YIgb1EY-hFQNyfzIiycwKZ/view?usp=drive_link)
 
 ### 📌 Contoh Metadata Kolom:
 
@@ -109,7 +109,134 @@ Dokumen ini menjelaskan fondasi dari sistem Data Warehouse untuk Tesla:
 - Struktur fakta dan dimensi
 - Kesesuaian dengan dataset yang digunakan
 
-> Misi 2 akan membahas desain konseptual dan star schema lebih detail.
+# 📘 Misi 2 – Dokumentasi Desain Konseptual Data Warehouse Tesla
+
+## 📌 Ringkasan Misi
+
+Dokumen ini menjelaskan **perancangan konseptual** dari Data Warehouse Tesla, yang bertujuan mengintegrasikan data lintas fungsi bisnis seperti produksi, distribusi, layanan pelanggan, dan inovasi produk. Sistem ini disiapkan agar mampu menjawab pertanyaan analitik dari berbagai sudut pandang, seperti waktu, wilayah, model kendaraan, hingga segmentasi pelanggan.
 
 ---
+
+## 🌟 Skema Konseptual: Star Schema
+
+Kami menggunakan pendekatan **Star Schema** yang terdiri dari:
+- 1 tabel fakta utama
+- 5 tabel dimensi
+- Hubungan one-to-many antar tabel
+
+### 🔎 Alasan Pemilihan Star Schema:
+- ✅ Sederhana & mudah dipahami
+- ✅ Cocok untuk analisis OLAP (drill-down, slice, roll-up)
+- ✅ Mendukung hierarki dalam dimensi
+- ✅ Performa cepat untuk query agregat
+- ✅ Fleksibel untuk ekspansi di masa depan
+
+---
+
+## 🧱 Tabel Fakta: `fakta_pengiriman_kendaraan`
+
+Menyimpan data numerik hasil proses bisnis Tesla.
+
+| Kolom                    | Fungsi dan Kegunaan |
+|--------------------------|---------------------|
+| `units_delivered`        | Metrik volume output distribusi kendaraan |
+| `production_delay_days`  | Indikator efisiensi produksi |
+| `average_price_usd`      | Strategi harga berdasarkan model/wilayah/waktu |
+| `service_visits`         | Keandalan kendaraan |
+| `battery_replacement_rate` | Kualitas dan daya tahan baterai |
+| `total_miles_driven`     | Performa dan ketahanan kendaraan |
+| `number_of_recalls`      | Cacat produksi dan keamanan |
+| `co2_saved_tons`         | Dampak positif terhadap lingkungan |
+| `resale_value_percent`   | Nilai jual kembali kendaraan |
+| `avg_customer_rating`    | Tingkat kepuasan pelanggan |
+
+---
+
+## 🧾 Tabel Dimensi
+
+### 1. `dim_waktu`
+
+| Kolom     | Deskripsi |
+|-----------|-----------|
+| `date`    | Tanggal pengiriman |
+| `month`   | Bulan |
+| `quarter` | Kuartal |
+| `year`    | Tahun |
+
+**Hierarki**: `Date → Quarter → Year`
+
+---
+
+### 2. `dim_model`
+
+| Kolom         | Deskripsi |
+|---------------|-----------|
+| `model`       | Jenis kendaraan Tesla |
+| `battery_type`| Tipe baterai (Standard, Long Range, Performance) |
+| `drive_type`  | Jenis penggerak (RWD, AWD) |
+| `color`       | Warna kendaraan |
+
+**Hierarki**: `Model → Battery Type → Drive Type → Color`
+
+---
+
+### 3. `dim_wilayah`
+
+| Kolom    | Deskripsi |
+|----------|-----------|
+| `city`   | Kota pengiriman |
+| `region` | Wilayah (misal: Asia, Eropa) |
+| `country`| Negara pengiriman |
+
+**Hierarki**: `City → Region → Country`
+
+---
+
+### 4. `dim_performa`
+
+| Kolom              | Deskripsi |
+|--------------------|-----------|
+| `software_version` | Versi perangkat lunak |
+| `efficiency`       | Efisiensi energi (kWh/100km) |
+| `charging_time`    | Waktu pengisian daya (menit) |
+| `autopilot_enabled`| Status autopilot (True/False) |
+
+**Hierarki**: `Software Version → Efficiency → Autopilot Enabled`
+
+---
+
+### 5. `dim_pelanggan`
+
+| Kolom             | Deskripsi |
+|-------------------|-----------|
+| `warranty_period` | Lama garansi (tahun) |
+| `update_frequency`| Frekuensi pembaruan software |
+| `customer_rating` | Rating pelanggan terhadap kendaraan |
+
+**Hierarki**: `Warranty → Update Frequency → Customer Rating`
+
+---
+
+## ✅ Justifikasi Desain
+
+Desain konseptual ini memenuhi kebutuhan Tesla karena:
+- Menghubungkan metrik bisnis penting ke dimensi operasional
+- Memungkinkan pelaporan kuartalan, wilayah, dan produk
+- Memudahkan integrasi data dari berbagai divisi
+- Mendukung sistem BI (Power BI, Tableau, dll)
+
+---
+
+## 🔗 Kesesuaian dengan Dataset
+
+Dataset yang digunakan:  
+**Tesla Vehicle Deliveries Dataset (2012–2024)** dari Kaggle
+
+📌 Kesesuaian:
+- Dataset memiliki semua atribut yang dibutuhkan untuk tabel fakta dan dimensi
+- Struktur tabular sangat cocok untuk dimodelkan dalam star schema
+- Data bersih dan terstruktur (kuartal, model, wilayah, rating, dan lainnya)
+
+---
+
 
