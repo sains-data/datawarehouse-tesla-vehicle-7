@@ -239,4 +239,191 @@ Dataset yang digunakan:
 
 ---
 
+# 📘 Misi 3 – Desain Logikal, Fisikal, dan ETL Pipeline untuk Data Warehouse Tesla
 
+## 🔧 Desain Logikal & Fisikal
+
+Misi ini melanjutkan tahapan pembangunan data warehouse Tesla dengan fokus pada:
+
+- Desain tabel logikal (SQL-ready)
+- Optimisasi performa melalui indeks & partisi
+- Strategi penyimpanan data (filegroup, kompresi)
+- Implementasi ETL pipeline (Extract, Transform, Load)
+
+---
+
+## 🗃️ Struktur Tabel Logikal
+
+Tabel dimensi dan fakta dirancang menggunakan SQL untuk mendukung integrasi data dan analisis multidimensi.
+
+### 📦 Tabel Fakta: `Fakta_Pengiriman_Kendaraan`
+
+```sql
+CREATE TABLE Fakta_Pengiriman_Kendaraan (
+    delivery_id SERIAL PRIMARY KEY,
+    model_id INT REFERENCES Dim_Model(model_id),
+    wilayah_id INT REFERENCES Dim_Wilayah(wilayah_id),
+    waktu_id INT REFERENCES Dim_Waktu(waktu_id),
+    performa_id INT REFERENCES Dim_Performa(performa_id),
+    pelanggan_id INT REFERENCES Dim_Pelanggan(pelanggan_id),
+    units_delivered INT,
+    production_delay_days INT,
+    average_price NUMERIC,
+    service_visits INT,
+    battery_replacement_rate FLOAT,
+    total_miles_driven INT,
+    number_of_recalls INT,
+    CO2_saved FLOAT,
+    resale_value FLOAT,
+    avg_customer_rating FLOAT,
+    delivery_date DATE
+);
+```
+
+## ⚡ Optimisasi Performa: Indeks & Partisi
+
+### ✅ Clustered Index
+
+```sql
+CREATE CLUSTERED INDEX idx_delivery_date
+ON Fakta_Pengiriman_Kendaraan (delivery_date);
+```
+### ✅ Non-Clustered Index
+
+```sql
+CREATE INDEX idx_model_id ON Fakta_Pengiriman_Kendaraan (model_id);
+CREATE INDEX idx_customer_id ON Fakta_Pengiriman_Kendaraan (pelanggan_id);
+```
+### ✅ Composite Index
+
+```sql
+CREATE INDEX idx_model_region 
+ON Fakta_Pengiriman_Kendaraan (model_id, wilayah_id);
+```
+
+## 🗂️ Partisi Berdasarkan Tahun
+
+### Fungsi & Skema Partisi
+
+```sql
+CREATE PARTITION FUNCTION pf_DeliveryYear (INT)
+AS RANGE LEFT FOR VALUES (2018, 2020, 2022, 2024);
+
+CREATE PARTITION SCHEME ps_DeliveryYear
+AS PARTITION pf_DeliveryYear ALL TO ([DW_Fakta]);
+```
+### Penerapan Partisi pada Tabel Fakta
+
+```sql
+CREATE CLUSTERED INDEX idx_delivery_date
+ON Fakta_Pengiriman_Kendaraan (delivery_date)
+ON ps_DeliveryYear (delivery_year);
+```
+## 💾 Strategi Penyimpanan
+
+### 📁 Filegroup & Kompresi
+
+- Tabel fakta ditempatkan dalam filegroup khusus DW_Fakta
+- Tabel dimensi berada di filegroup PRIMARY
+- Tabel fakta dikompresi menggunakan PAGE compression
+
+```sql
+ALTER TABLE Fakta_Pengiriman_Kendaraan
+REBUILD PARTITION = ALL
+WITH (DATA_COMPRESSION = PAGE);
+```
+
+## 🔄 ETL Pipeline (Extract, Transform, Load)
+
+### 📌 Arsitektur ETL
+- Extract – Mengambil data dari file CSV eksternal ke staging
+- Transform – Membersihkan dan memetakan data ke dimensi
+- Load – Memasukkan data akhir ke tabel fakta
+
+### 📥 Extract
+
+```sql
+COPY Staging_Tesla_Deliveries 
+FROM '/data/tesla_vehicle_deliveries.csv' 
+DELIMITER ',' CSV HEADER;
+```
+
+### 🧹 Transform (Contoh Dimensi Model)
+
+```sql
+INSERT INTO Dim_Model (model, battery_type, drive_type, color)
+SELECT DISTINCT Model, "Battery Type", "Drive Type", Color
+FROM Staging_Tesla_Deliveries
+WHERE Model IS NOT NULL;
+```
+
+### 📤 Load ke Tabel Fakta
+
+```sql
+INSERT INTO Fakta_Pengiriman_Kendaraan (
+    model_id, wilayah_id, waktu_id, performa_id, pelanggan_id,
+    units_delivered, production_delay_days, average_price,
+    service_visits, battery_replacement_rate, total_miles_driven,
+    number_of_recalls, CO2_saved, resale_value, avg_customer_rating
+)
+SELECT 
+    m.model_id, r.wilayah_id, w.waktu_id, p.performa_id, c.pelanggan_id,
+    s."Units Delivered", s."Production Delay (Days)", s."Average Price (USD)",
+    s."Service Visits (Per Year)", s."Battery Replacement Rate", s."Total Miles Driven",
+    s."Number of Recalls", s."CO2 Saved (Tons)", s."Resale Value (%)", s."Avg Customer Rating"
+FROM Staging_Tesla_Deliveries s
+JOIN Dim_Model m ON s.Model = m.model
+JOIN Dim_Wilayah r ON s.Region = r.region
+JOIN Dim_Waktu w ON s.Year = w.year 
+    AND CASE s.Quarter 
+        WHEN 'Q1' THEN 1 
+        WHEN 'Q2' THEN 2 
+        WHEN 'Q3' THEN 3 
+        WHEN 'Q4' THEN 4 
+    END = w.quarter
+JOIN Dim_Performa p ON s."Software Version" = p.software_version
+JOIN Dim_Pelanggan c ON s."Avg Customer Rating" = c.customer_rating;
+```
+
+## 📊 View dan Data Mart
+
+### 📈 Indexed View: Rata-Rata Rating per Model
+
+```sql 
+CREATE VIEW vw_AvgRatingPerModel
+WITH SCHEMABINDING AS
+SELECT 
+    m.model,
+    AVG(f.avg_customer_rating) AS avg_rating
+FROM dbo.Fakta_Pengiriman_Kendaraan f
+JOIN dbo.Dim_Model m ON f.model_id = m.model_id
+GROUP BY m.model;
+
+CREATE UNIQUE CLUSTERED INDEX idx_rating_model
+ON vw_AvgRatingPerModel (model);
+```
+
+### 📊 Data Mart: Kepuasan Pelanggan
+
+```sql
+CREATE TABLE DataMart_KepuasanPelanggan AS
+SELECT 
+    f.delivery_date,
+    m.model,
+    r.region,
+    f.avg_customer_rating,
+    f.service_visits
+FROM Fakta_Pengiriman_Kendaraan f
+JOIN Dim_Model m ON f.model_id = m.model_id
+JOIN Dim_Wilayah r ON f.wilayah_id = r.wilayah_id
+WHERE f.avg_customer_rating IS NOT NULL;
+
+```
+
+## ✅ Ringkasan Misi 3
+
+- Telah dirancang dan diimplementasikan struktur tabel fakta dan dimensi
+- Indeks, partisi, dan kompresi diterapkan untuk efisiensi kueri
+- ETL pipeline siap digunakan untuk pemrosesan data besar
+- Sistem mendukung analitik berbasis waktu, model, dan wilayah
+- Dapat langsung diintegrasikan dengan tools BI seperti Power BI, Tableau, atau Metabase
