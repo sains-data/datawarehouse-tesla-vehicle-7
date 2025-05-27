@@ -1,0 +1,6 @@
+LOAD DATA INFILE 'directory_dataset'
+INTO TABLE Staging_Pengiriman_Kendaraan
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
