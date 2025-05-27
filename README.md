@@ -10,7 +10,11 @@ Proyek ini merupakan implementasi sistem **Data Warehouse untuk industri manufak
 |---------------------|------------------|
 | 📊 Nama Proyek      | Data Warehouse Tesla - Pengiriman Kendaraan |
 | 🏫 Institusi        | Institut Teknologi Sumatera - Prodi Sains Data |
-| 👥 Tim              | Kelompok 7 (Rafif, Elia, Sahid, Chalifia) |
+| 👥 Tim               |
+| Elia Meylani Simanjuntak 	(122450026) |
+| Chalifia Wananda	 	(122450076) |
+| Sahid Maulana 			(122450109) |
+| Muhammad Rafif Vivaldi 	(122140026) |
 | 📁 Dataset          | [Tesla Vehicle Deliveries Dataset (2012–2024)](https://www.kaggle.com/datasets/khushikyad001/tesla-vehicle-deliveries-dataset-20122024/data) |
 | 📌 Tools            | PostgreSQL / MySQL, Python (pandas), Airflow (ETL) |
 
